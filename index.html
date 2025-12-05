@@ -1,0 +1,1021 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>旅とも</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            color: #667eea;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 24px;
+        }
+
+        .status-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+
+        .status-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .status-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .status-label {
+            color: #6c757d;
+            font-weight: 600;
+        }
+
+        .status-value {
+            color: #212529;
+            font-weight: 700;
+        }
+
+        .status-active {
+            color: #28a745;
+        }
+
+        .status-playing {
+            color: #007bff;
+        }
+
+        .gps-status {
+            color: #17a2b8;
+        }
+
+        .gps-distance {
+            background: #e7f5ff;
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+            margin-top: 10px;
+            font-size: 16px;
+            font-weight: 700;
+            color: #0c5460;
+        }
+
+        .volume-bar-container {
+            margin-bottom: 25px;
+        }
+
+        .volume-bar-label {
+            font-size: 14px;
+            color: #6c757d;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .volume-bar-wrapper {
+            background: #e9ecef;
+            height: 30px;
+            border-radius: 15px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .volume-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #28a745 0%, #ffc107 50%, #dc3545 100%);
+            width: 0%;
+            transition: width 0.1s ease-out;
+        }
+
+        .threshold-indicator {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 3px;
+            background: #dc3545;
+            z-index: 10;
+            transition: left 0.3s ease;
+        }
+
+        .threshold-indicator::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 10px;
+            height: 10px;
+            background: #dc3545;
+            border-radius: 50%;
+            border: 2px solid white;
+        }
+
+        .volume-value {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 12px;
+            font-weight: 700;
+            color: #495057;
+            z-index: 5;
+        }
+
+        .control-section {
+            margin-bottom: 15px;
+        }
+
+        .control-label {
+            font-size: 14px;
+            color: #6c757d;
+            margin-bottom: 10px;
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .threshold-value {
+            color: #667eea;
+            font-weight: 700;
+        }
+
+        .duration-value {
+            color: #764ba2;
+            font-weight: 700;
+        }
+
+        .radius-value {
+            color: #17a2b8;
+            font-weight: 700;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 8px;
+            border-radius: 5px;
+            background: #e9ecef;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+            border: none;
+        }
+
+        .button-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .notification-toggle, .gps-toggle {
+            grid-column: 1 / -1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            margin-bottom: 10px;
+        }
+
+        .notification-toggle input[type="checkbox"],
+        .gps-toggle input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        .notification-toggle label,
+        .gps-toggle label {
+            font-size: 14px;
+            font-weight: 600;
+            color: #495057;
+            cursor: pointer;
+        }
+
+        button {
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(108, 117, 125, 0.4);
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+            grid-column: 1 / -1;
+        }
+
+        .btn-success:hover {
+            background: #218838;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(40, 167, 69, 0.4);
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #c82333;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.6;
+            }
+        }
+
+        .loading {
+            text-align: center;
+            color: #667eea;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 20px;
+            }
+
+            h1 {
+                font-size: 20px;
+                margin-bottom: 20px;
+            }
+
+            button {
+                padding: 12px;
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎧 旅とも</h1>
+        
+        <div class="status-section">
+            <div class="status-row">
+                <span class="status-label">スポット:</span>
+                <span class="status-value" id="spotNumber">1</span>
+            </div>
+            <div class="status-row">
+                <span class="status-label">トラック:</span>
+                <span class="status-value" id="trackNumber">1 / ?</span>
+            </div>
+            <div class="status-row">
+                <span class="status-label">状態:</span>
+                <span class="status-value" id="statusText">初期化中...</span>
+            </div>
+            <div class="status-row" id="gpsStatusRow" style="display: none;">
+                <span class="status-label">GPS:</span>
+                <span class="status-value gps-status" id="gpsStatus">取得中...</span>
+            </div>
+            <div class="gps-distance" id="gpsDistance" style="display: none;">
+                📍 次のスポットまで: 計算中...
+            </div>
+        </div>
+
+        <div class="volume-bar-container">
+            <div class="volume-bar-label">音量レベル</div>
+            <div class="volume-bar-wrapper">
+                <div class="volume-bar" id="volumeBar"></div>
+                <div class="threshold-indicator" id="thresholdIndicator"></div>
+                <span class="volume-value" id="volumeValue">0</span>
+            </div>
+        </div>
+
+        <div class="control-section">
+            <div class="control-label">
+                <span>無音検知しきい値</span>
+                <span class="threshold-value" id="thresholdValue">50</span>
+            </div>
+            <input type="range" id="thresholdSlider" min="0" max="100" value="50" step="1">
+        </div>
+
+        <div class="control-section">
+            <div class="control-label">
+                <span>無音持続時間</span>
+                <span class="duration-value" id="durationValue">1.0秒</span>
+            </div>
+            <input type="range" id="durationSlider" min="0.5" max="30.0" value="1.0" step="0.5">
+        </div>
+
+        <div class="control-section">
+            <div class="control-label">
+                <span>GPS検知範囲</span>
+                <span class="radius-value" id="radiusValue">100m</span>
+            </div>
+            <input type="range" id="radiusSlider" min="50" max="1000" value="100" step="50">
+        </div>
+
+        <div class="button-group">
+            <div class="gps-toggle">
+                <input type="checkbox" id="gpsToggle">
+                <label for="gpsToggle">📍 GPS自動切り替え</label>
+            </div>
+            <div class="notification-toggle">
+                <input type="checkbox" id="notificationToggle" checked>
+                <label for="notificationToggle">🔔 通知音を鳴らす</label>
+            </div>
+            <button class="btn-primary" id="toggleDetection" disabled>検知開始</button>
+            <button class="btn-secondary" id="skipButton" disabled>次へスキップ</button>
+            <button class="btn-success" id="startButton">スタート</button>
+        </div>
+        
+        <div class="loading" id="loadingMessage"></div>
+    </div>
+
+    <script>
+        class AudioGuideSystem {
+            constructor() {
+                this.totalSpots = 6;
+                this.currentSpot = 1;
+                this.currentTrack = 1;
+                this.spotTrackCounts = {};
+                this.isDetecting = false;
+                this.isPlaying = false;
+                this.isLoading = false;
+                this.silenceThreshold = 50;
+                this.silenceDuration = 0;
+                this.requiredSilenceDuration = 1000;
+                this.audioContext = null;
+                this.analyser = null;
+                this.microphone = null;
+                this.audioElement = new Audio();
+                this.notificationAudio = new Audio();
+                this.isSystemStarted = false;
+                this.lastSoundTime = Date.now();
+                this.useNotification = true;
+                this.useGPS = false;
+                this.gpsWatchId = null;
+                this.currentPosition = null;
+                this.lastSpotChangeByGPS = 0;
+                this.gpsRadius = 100; // GPS検知範囲（デフォルト100m）
+                this.isFirstGPSFix = true; // 初回GPS取得フラグ
+                
+                // スポットの座標設定（実際の座標に変更してください）
+                this.spotLocations = [
+                    { id: 1, lat: 35.6586, lon: 139.7454 }, // 東京駅（例）
+                    { id: 2, lat: 35.6762, lon: 139.6503 }, // 東京タワー（例）
+                    { id: 3, lat: 35.7148, lon: 139.7967 }, // スカイツリー（例）
+                    { id: 4, lat: 35.6812, lon: 139.7671 }, // 秋葉原（例）
+                    { id: 5, lat: 35.6895, lon: 139.6917 }, // 新宿（例）
+                    { id: 6, lat: 35.60808686673842, lon: 139.55517818459722 }, // 新規スポット
+                ];
+                
+                this.initUI();
+                this.audioElement.addEventListener('ended', () => this.onAudioEnded());
+                this.notificationAudio.addEventListener('ended', () => this.onNotificationEnded());
+                this.loadSpotConfiguration();
+            }
+
+            async loadSpotConfiguration() {
+                this.elements.loadingMessage.textContent = '音声ファイルを検索中...';
+                
+                for (let spot = 1; spot <= this.totalSpots; spot++) {
+                    let trackCount = 0;
+                    let trackIndex = 1;
+                    
+                    while (trackIndex <= 20) {
+                        const testPath = `/static/sounds/spot${spot}/${String(trackIndex).padStart(2, '0')}.wav`;
+                        const exists = await this.checkFileExists(testPath);
+                        
+                        if (exists) {
+                            trackCount = trackIndex;
+                            trackIndex++;
+                        } else {
+                            break;
+                        }
+                    }
+                    
+                    this.spotTrackCounts[spot] = trackCount;
+                    console.log(`Spot ${spot}: ${trackCount} tracks found`);
+                }
+                
+                this.elements.loadingMessage.textContent = `設定完了: 全${this.totalSpots}スポット`;
+                this.updateUI();
+                
+                setTimeout(() => {
+                    this.elements.loadingMessage.textContent = '';
+                }, 2000);
+            }
+
+            async checkFileExists(url) {
+                try {
+                    const response = await fetch(url, { method: 'HEAD' });
+                    return response.ok;
+                } catch (error) {
+                    return false;
+                }
+            }
+
+            initUI() {
+                this.elements = {
+                    spotNumber: document.getElementById('spotNumber'),
+                    trackNumber: document.getElementById('trackNumber'),
+                    statusText: document.getElementById('statusText'),
+                    volumeBar: document.getElementById('volumeBar'),
+                    volumeValue: document.getElementById('volumeValue'),
+                    thresholdSlider: document.getElementById('thresholdSlider'),
+                    thresholdValue: document.getElementById('thresholdValue'),
+                    durationSlider: document.getElementById('durationSlider'),
+                    durationValue: document.getElementById('durationValue'),
+                    radiusSlider: document.getElementById('radiusSlider'),
+                    radiusValue: document.getElementById('radiusValue'),
+                    thresholdIndicator: document.getElementById('thresholdIndicator'),
+                    toggleDetection: document.getElementById('toggleDetection'),
+                    skipButton: document.getElementById('skipButton'),
+                    startButton: document.getElementById('startButton'),
+                    loadingMessage: document.getElementById('loadingMessage'),
+                    notificationToggle: document.getElementById('notificationToggle'),
+                    gpsToggle: document.getElementById('gpsToggle'),
+                    gpsStatusRow: document.getElementById('gpsStatusRow'),
+                    gpsStatus: document.getElementById('gpsStatus'),
+                    gpsDistance: document.getElementById('gpsDistance')
+                };
+
+                this.elements.thresholdSlider.addEventListener('input', (e) => {
+                    this.silenceThreshold = parseInt(e.target.value);
+                    this.elements.thresholdValue.textContent = this.silenceThreshold;
+                    this.updateThresholdIndicator();
+                });
+
+                this.elements.durationSlider.addEventListener('input', (e) => {
+                    const seconds = parseFloat(e.target.value);
+                    this.requiredSilenceDuration = seconds * 1000;
+                    this.elements.durationValue.textContent = `${seconds.toFixed(1)}秒`;
+                });
+
+                this.elements.radiusSlider.addEventListener('input', (e) => {
+                    this.gpsRadius = parseInt(e.target.value);
+                    this.elements.radiusValue.textContent = `${this.gpsRadius}m`;
+                });
+
+                this.elements.notificationToggle.addEventListener('change', (e) => {
+                    this.useNotification = e.target.checked;
+                });
+
+                this.elements.gpsToggle.addEventListener('change', (e) => {
+                    this.toggleGPS(e.target.checked);
+                });
+
+                this.elements.toggleDetection.addEventListener('click', () => {
+                    this.toggleDetection();
+                });
+
+                this.elements.skipButton.addEventListener('click', () => {
+                    this.skipToNextSpot();
+                });
+
+                this.elements.startButton.addEventListener('click', () => {
+                    this.startSystem();
+                });
+            }
+
+            toggleGPS(enabled) {
+                this.useGPS = enabled;
+                
+                if (enabled) {
+                    this.isFirstGPSFix = true; // GPS ONにした時は初回扱い
+                    this.startGPS();
+                    this.elements.gpsStatusRow.style.display = 'flex';
+                    this.elements.gpsDistance.style.display = 'block';
+                } else {
+                    this.stopGPS();
+                    this.elements.gpsStatusRow.style.display = 'none';
+                    this.elements.gpsDistance.style.display = 'none';
+                }
+            }
+
+            startGPS() {
+                if (!navigator.geolocation) {
+                    alert('お使いのブラウザはGPSに対応していません');
+                    this.elements.gpsToggle.checked = false;
+                    return;
+                }
+
+                this.elements.gpsStatus.textContent = '取得中...';
+                
+                this.gpsWatchId = navigator.geolocation.watchPosition(
+                    (position) => this.onGPSSuccess(position),
+                    (error) => this.onGPSError(error),
+                    {
+                        enableHighAccuracy: true,
+                        timeout: 10000,
+                        maximumAge: 5000
+                    }
+                );
+            }
+
+            stopGPS() {
+                if (this.gpsWatchId !== null) {
+                    navigator.geolocation.clearWatch(this.gpsWatchId);
+                    this.gpsWatchId = null;
+                }
+                this.currentPosition = null;
+            }
+
+            onGPSSuccess(position) {
+                this.currentPosition = {
+                    lat: position.coords.latitude,
+                    lon: position.coords.longitude,
+                    accuracy: position.coords.accuracy
+                };
+
+                this.elements.gpsStatus.textContent = `精度: ${Math.round(position.coords.accuracy)}m`;
+                
+                // 最も近いスポットを検索
+                let nearestSpot = null;
+                let nearestDistance = Infinity;
+                
+                this.spotLocations.forEach(spot => {
+                    const distance = this.calculateDistance(
+                        this.currentPosition.lat,
+                        this.currentPosition.lon,
+                        spot.lat,
+                        spot.lon
+                    );
+                    
+                    if (distance < nearestDistance) {
+                        nearestDistance = distance;
+                        nearestSpot = spot;
+                    }
+                });
+
+                // 距離表示を更新
+                if (nearestSpot) {
+                    if (nearestSpot.id === this.currentSpot) {
+                        this.elements.gpsDistance.textContent = `📍 現在のスポット内 (${Math.round(nearestDistance)}m)`;
+                    } else {
+                        this.elements.gpsDistance.textContent = `📍 スポット${nearestSpot.id}まで: ${Math.round(nearestDistance)}m`;
+                    }
+                    
+                    // 初回GPS取得時は無条件で最寄りスポットに切り替え
+                    if (this.isFirstGPSFix && nearestDistance <= this.gpsRadius) {
+                        this.changeSpotByGPS(nearestSpot.id);
+                        this.isFirstGPSFix = false;
+                        return;
+                    }
+                    
+                    // 2回目以降：範囲内に入ったら自動切り替え（連続切り替え防止あり）
+                    if (nearestDistance <= this.gpsRadius && nearestSpot.id !== this.currentSpot) {
+                        const now = Date.now();
+                        if (now - this.lastSpotChangeByGPS > 10000) {
+                            this.changeSpotByGPS(nearestSpot.id);
+                            this.lastSpotChangeByGPS = now;
+                        }
+                    }
+                }
+            }
+
+            onGPSError(error) {
+                console.error('GPS error:', error);
+                let message = 'エラー';
+                
+                switch(error.code) {
+                    case error.PERMISSION_DENIED:
+                        message = '位置情報が拒否されました';
+                        break;
+                    case error.POSITION_UNAVAILABLE:
+                        message = '位置情報が取得できません';
+                        break;
+                    case error.TIMEOUT:
+                        message = 'タイムアウト';
+                        break;
+                }
+                
+                this.elements.gpsStatus.textContent = message;
+            }
+
+            calculateDistance(lat1, lon1, lat2, lon2) {
+                // Haversine公式で2点間の距離を計算（メートル）
+                const R = 6371e3; // 地球の半径（メートル）
+                const φ1 = lat1 * Math.PI / 180;
+                const φ2 = lat2 * Math.PI / 180;
+                const Δφ = (lat2 - lat1) * Math.PI / 180;
+                const Δλ = (lon2 - lon1) * Math.PI / 180;
+
+                const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+                        Math.cos(φ1) * Math.cos(φ2) *
+                        Math.sin(Δλ/2) * Math.sin(Δλ/2);
+                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+
+                return R * c;
+            }
+
+            changeSpotByGPS(newSpotId) {
+                if (this.isPlaying) {
+                    this.audioElement.pause();
+                    this.audioElement.currentTime = 0;
+                }
+                
+                this.isPlaying = false;
+                this.isLoading = false;
+                this.currentSpot = newSpotId;
+                this.currentTrack = 1;
+                this.updateUI();
+                
+                this.elements.loadingMessage.textContent = `📍 スポット${newSpotId}に到着！`;
+                setTimeout(() => {
+                    this.elements.loadingMessage.textContent = '';
+                }, 3000);
+                
+                if (this.isDetecting) {
+                    this.updateStatus('検知中 (GPS切り替え)');
+                } else {
+                    this.updateStatus('待機中');
+                }
+                
+                this.elements.skipButton.disabled = true;
+            }
+
+            async startSystem() {
+                if (this.isSystemStarted) return;
+                
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    this.analyser = this.audioContext.createAnalyser();
+                    this.analyser.fftSize = 2048;
+                    this.microphone = this.audioContext.createMediaStreamSource(stream);
+                    this.microphone.connect(this.analyser);
+                    
+                    this.isSystemStarted = true;
+                    this.elements.startButton.textContent = 'システム起動中';
+                    this.elements.startButton.disabled = true;
+                    this.elements.toggleDetection.disabled = false;
+                    
+                    this.updateStatus('待機中');
+                    this.startVolumeMonitoring();
+                    this.updateThresholdIndicator();
+                    
+                    this.toggleDetection();
+                    
+                } catch (error) {
+                    alert('マイクへのアクセスが拒否されました。ブラウザの設定を確認してください。');
+                    console.error('Microphone access error:', error);
+                }
+            }
+
+            startVolumeMonitoring() {
+                const updateVolume = () => {
+                    if (!this.analyser) return;
+                    
+                    const bufferLength = this.analyser.frequencyBinCount;
+                    const dataArray = new Uint8Array(bufferLength);
+                    const frequencyData = new Uint8Array(bufferLength);
+                    
+                    this.analyser.getByteTimeDomainData(dataArray);
+                    this.analyser.getByteFrequencyData(frequencyData);
+                    
+                    const sampleRate = this.audioContext.sampleRate;
+                    const nyquist = sampleRate / 2;
+                    const frequencyPerBin = nyquist / bufferLength;
+                    
+                    const voiceMinFreq = 300;
+                    const voiceMaxFreq = 3400;
+                    
+                    const minBin = Math.floor(voiceMinFreq / frequencyPerBin);
+                    const maxBin = Math.floor(voiceMaxFreq / frequencyPerBin);
+                    
+                    let voiceSum = 0;
+                    let voiceCount = 0;
+                    for (let i = minBin; i < maxBin && i < frequencyData.length; i++) {
+                        voiceSum += frequencyData[i];
+                        voiceCount++;
+                    }
+                    const voiceAverage = voiceCount > 0 ? voiceSum / voiceCount : 0;
+                    
+                    const normalizedVolume = Math.min(100, Math.max(0, (voiceAverage / 255) * 100));
+                    
+                    this.elements.volumeBar.style.width = normalizedVolume + '%';
+                    this.elements.volumeValue.textContent = Math.round(normalizedVolume);
+                    
+                    if (this.isDetecting && !this.isPlaying && !this.isLoading) {
+                        const currentTime = Date.now();
+                        
+                        if (normalizedVolume > this.silenceThreshold) {
+                            this.lastSoundTime = currentTime;
+                            this.silenceDuration = 0;
+                        } else {
+                            this.silenceDuration = currentTime - this.lastSoundTime;
+                            
+                            if (this.silenceDuration >= this.requiredSilenceDuration) {
+                                this.onSilenceDetected();
+                            }
+                        }
+                    }
+                    
+                    requestAnimationFrame(updateVolume);
+                };
+                
+                updateVolume();
+            }
+
+            updateThresholdIndicator() {
+                this.elements.thresholdIndicator.style.left = this.silenceThreshold + '%';
+            }
+
+            toggleDetection() {
+                if (!this.isSystemStarted) return;
+                
+                this.isDetecting = !this.isDetecting;
+                
+                if (this.isDetecting) {
+                    this.elements.toggleDetection.textContent = '検知停止';
+                    this.elements.toggleDetection.classList.remove('btn-primary');
+                    this.elements.toggleDetection.classList.add('btn-danger');
+                    this.lastSoundTime = Date.now();
+                    this.silenceDuration = 0;
+                    
+                    if (!this.isPlaying) {
+                        this.updateStatus('検知中');
+                    }
+                } else {
+                    this.elements.toggleDetection.textContent = '検知開始';
+                    this.elements.toggleDetection.classList.remove('btn-danger');
+                    this.elements.toggleDetection.classList.add('btn-primary');
+                    this.updateStatus('検知停止');
+                }
+            }
+
+            onSilenceDetected() {
+                if (this.isPlaying || this.isLoading) return;
+                
+                const totalTracks = this.spotTrackCounts[this.currentSpot] || 0;
+                
+                if (totalTracks === 0) {
+                    console.log(`Spot ${this.currentSpot} has no tracks, moving to next spot`);
+                    this.moveToNextSpot();
+                    return;
+                }
+                
+                if (this.currentTrack <= totalTracks) {
+                    this.playCurrentTrack();
+                }
+                
+                this.silenceDuration = 0;
+                this.lastSoundTime = Date.now();
+            }
+
+            playCurrentTrack() {
+                if (this.isPlaying || this.isLoading) return;
+                
+                this.isLoading = true;
+                this.isPlaying = true;
+                this.elements.skipButton.disabled = false;
+                
+                if (this.useNotification) {
+                    this.updateStatus('通知音再生中...');
+                    this.notificationAudio.src = '/static/sounds/notification.wav';
+                    this.notificationAudio.load();
+                    
+                    this.notificationAudio.play()
+                        .then(() => {
+                            console.log('Notification sound playing');
+                        })
+                        .catch(error => {
+                            console.error('Notification play error:', error);
+                            this.playMainAudio();
+                        });
+                } else {
+                    this.playMainAudio();
+                }
+            }
+
+            onNotificationEnded() {
+                this.playMainAudio();
+            }
+
+            playMainAudio() {
+                const audioPath = `/static/sounds/spot${this.currentSpot}/${String(this.currentTrack).padStart(2, '0')}.wav`;
+                
+                this.updateStatus('読み込み中...');
+                
+                this.audioElement.src = audioPath;
+                this.audioElement.load();
+                
+                this.audioElement.play()
+                    .then(() => {
+                        this.isLoading = false;
+                        this.updateStatus('再生中');
+                        console.log(`Playing: ${audioPath}`);
+                    })
+                    .catch(error => {
+                        console.error('Audio play error:', error);
+                        console.error('Failed to load:', audioPath);
+                        this.isLoading = false;
+                        this.isPlaying = false;
+                        this.updateStatus('エラー: 音声ファイルが見つかりません');
+                        this.elements.skipButton.disabled = true;
+                        
+                        setTimeout(() => {
+                            this.handlePlaybackError();
+                        }, 2000);
+                    });
+            }
+
+            handlePlaybackError() {
+                const totalTracks = this.spotTrackCounts[this.currentSpot] || 0;
+                
+                if (this.currentTrack < totalTracks) {
+                    this.currentTrack++;
+                    this.updateUI();
+                    this.silenceDuration = 0;
+                    this.lastSoundTime = Date.now();
+                    if (this.isDetecting) {
+                        this.updateStatus('検知中 (エラー後)');
+                    }
+                } else {
+                    this.moveToNextSpot();
+                }
+            }
+
+            onAudioEnded() {
+                this.isPlaying = false;
+                this.isLoading = false;
+                this.lastSoundTime = Date.now();
+                this.silenceDuration = 0;
+                this.elements.skipButton.disabled = true;
+                
+                const totalTracks = this.spotTrackCounts[this.currentSpot] || 0;
+                
+                if (this.currentTrack < totalTracks) {
+                    this.currentTrack++;
+                    this.updateUI();
+                    
+                    if (this.isDetecting) {
+                        this.updateStatus('検知中 (次のトラック待機)');
+                    } else {
+                        this.updateStatus('待機中');
+                    }
+                } else {
+                    // GPSモードでは次のスポットに自動で移動しない
+                    if (!this.useGPS) {
+                        this.moveToNextSpot();
+                    } else {
+                        // GPSモードでは現在のスポットに留まる
+                        this.currentTrack = 1;
+                        this.updateUI();
+                        if (this.isDetecting) {
+                            this.updateStatus('検知中 (スポット完了)');
+                        } else {
+                            this.updateStatus('スポット完了');
+                        }
+                    }
+                }
+            }
+
+            moveToNextSpot() {
+                this.currentSpot++;
+                this.currentTrack = 1;
+                
+                if (this.currentSpot > this.totalSpots) {
+                    this.speakFinalMessage();
+                    this.currentSpot = 1;
+                }
+                
+                this.updateUI();
+                
+                if (this.isDetecting) {
+                    this.updateStatus('検知中 (次のスポット)');
+                } else {
+                    this.updateStatus('待機中');
+                }
+                
+                this.elements.skipButton.disabled = true;
+            }
+
+            skipToNextSpot() {
+                if (this.isPlaying) {
+                    this.audioElement.pause();
+                    this.audioElement.currentTime = 0;
+                }
+                
+                this.isPlaying = false;
+                this.isLoading = false;
+                this.moveToNextSpot();
+            }
+
+            speakFinalMessage() {
+                if ('speechSynthesis' in window) {
+                    const utterance = new SpeechSynthesisUtterance('ありがとうございました。ツアーは終了です。');
+                    utterance.lang = 'ja-JP';
+                    utterance.rate = 1.0;
+                    window.speechSynthesis.speak(utterance);
+                }
+            }
+
+            updateUI() {
+                const totalTracks = this.spotTrackCounts[this.currentSpot] || '?';
+                this.elements.spotNumber.textContent = this.currentSpot;
+                this.elements.trackNumber.textContent = `${this.currentTrack} / ${totalTracks}`;
+            }
+
+            updateStatus(status) {
+                this.elements.statusText.textContent = status;
+                this.elements.statusText.className = 'status-value';
+                
+                if (status.includes('検知中')) {
+                    this.elements.statusText.classList.add('status-active', 'pulse');
+                } else if (status.includes('再生中')) {
+                    this.elements.statusText.classList.add('status-playing');
+                } else {
+                    this.elements.statusText.classList.remove('pulse');
+                }
+            }
+        }
+
+        // システムの初期化
+        const guideSystem = new AudioGuideSystem();
+    </script>
+</body>
+</html>
