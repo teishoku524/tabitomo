@@ -414,20 +414,14 @@
     </div>
 
  <script>
-// ---------------------------
-// GitHub Pages でも Flask でも動く BASE_URL
-// ---------------------------
-const BASE_PATH = window.location.pathname.startsWith('/tabitomo')
-    ? '/tabitomo'
-    : '';
+// ===============================
+// GitHub Pages 対応 BASE_URL 設定
+// ===============================
+const BASE_PATH = window.location.pathname.startsWith("/tabitomo")
+    ? "/tabitomo"
+    : "";
 const BASE_URL = window.location.origin + BASE_PATH;
 
-console.log("BASE_URL:", BASE_URL);
-
-
-// ---------------------------
-// AudioGuideSystem クラス
-// ---------------------------
 class AudioGuideSystem {
     constructor() {
         this.totalSpots = 6;
@@ -455,25 +449,15 @@ class AudioGuideSystem {
         this.gpsRadius = 100;
         this.isFirstGPSFix = true;
 
-        // スポット座標（仮）
-        this.spotLocations = [
-            { id: 1, lat: 35.6586, lon: 139.7454 },
-            { id: 2, lat: 35.6762, lon: 139.6503 },
-            { id: 3, lat: 35.7148, lon: 139.7967 },
-            { id: 4, lat: 35.6812, lon: 139.7671 },
-            { id: 5, lat: 35.6895, lon: 139.6917 },
-            { id: 6, lat: 35.60808686673842, lon: 139.55517818459722 },
-        ];
-
         this.initUI();
         this.audioElement.addEventListener("ended", () => this.onAudioEnded());
         this.notificationAudio.addEventListener("ended", () => this.onNotificationEnded());
         this.loadSpotConfiguration();
     }
 
-    // -------------------------
-    // 音声ファイルの存在チェック
-    // -------------------------
+    // ===========================
+    //  音声ファイル自動スキャン
+    // ===========================
     async loadSpotConfiguration() {
         this.elements.loadingMessage.textContent = "音声ファイルを検索中...";
 
@@ -482,7 +466,9 @@ class AudioGuideSystem {
             let trackIndex = 1;
 
             while (trackIndex <= 20) {
-                const testPath = `${BASE_URL}/static/sounds/spot${spot}/${String(trackIndex).padStart(2, "0")}.wav`;
+                const testPath = `${BASE_URL}/static/sounds/spot${spot}/${String(
+                    trackIndex
+                ).padStart(2, "0")}.wav`;
 
                 const exists = await this.checkFileExists(testPath);
                 if (exists) {
@@ -497,9 +483,9 @@ class AudioGuideSystem {
             console.log(`Spot ${spot}: ${trackCount} tracks found`);
         }
 
-        this.elements.loadingMessage.textContent = `設定完了: 全${this.totalSpots}スポット`;
         this.updateUI();
 
+        this.elements.loadingMessage.textContent = `設定完了: 全${this.totalSpots}スポット`;
         setTimeout(() => {
             this.elements.loadingMessage.textContent = "";
         }, 2000);
@@ -507,16 +493,16 @@ class AudioGuideSystem {
 
     async checkFileExists(url) {
         try {
-            const response = await fetch(url, { method: "HEAD" });
-            return response.ok;
-        } catch {
+            const res = await fetch(url, { method: "HEAD" });
+            return res.ok;
+        } catch (e) {
             return false;
         }
     }
 
-    // -------------------------
-    // UI 初期化
-    // -------------------------
+    // ===========================
+    //      UI 初期化
+    // ===========================
     initUI() {
         this.elements = {
             spotNumber: document.getElementById("spotNumber"),
@@ -537,12 +523,8 @@ class AudioGuideSystem {
             loadingMessage: document.getElementById("loadingMessage"),
             notificationToggle: document.getElementById("notificationToggle"),
             gpsToggle: document.getElementById("gpsToggle"),
-            gpsStatusRow: document.getElementById("gpsStatusRow"),
-            gpsStatus: document.getElementById("gpsStatus"),
-            gpsDistance: document.getElementById("gpsDistance"),
         };
 
-        // スライダー等のイベントは元コードのまま
         this.elements.thresholdSlider.addEventListener("input", (e) => {
             this.silenceThreshold = parseInt(e.target.value);
             this.elements.thresholdValue.textContent = this.silenceThreshold;
@@ -550,49 +532,129 @@ class AudioGuideSystem {
         });
 
         this.elements.durationSlider.addEventListener("input", (e) => {
-            const seconds = parseFloat(e.target.value);
-            this.requiredSilenceDuration = seconds * 1000;
-            this.elements.durationValue.textContent = `${seconds.toFixed(1)}秒`;
+            const sec = parseFloat(e.target.value);
+            this.requiredSilenceDuration = sec * 1000;
+            this.elements.durationValue.textContent = `${sec.toFixed(1)}秒`;
         });
 
-        this.elements.radiusSlider.addEventListener("input", (e) => {
-            this.gpsRadius = parseInt(e.target.value);
-            this.elements.radiusValue.textContent = `${this.gpsRadius}m`;
-        });
-
-        this.elements.notificationToggle.addEventListener("change", (e) => {
-            this.useNotification = e.target.checked;
-        });
+        this.elements.toggleDetection.addEventListener("click", () =>
+            this.toggleDetection()
+        );
 
         this.elements.startButton.addEventListener("click", () => this.startSystem());
-        this.elements.toggleDetection.addEventListener("click", () => this.toggleDetection());
         this.elements.skipButton.addEventListener("click", () => this.skipToNextSpot());
+        this.elements.notificationToggle.addEventListener(
+            "change",
+            (e) => (this.useNotification = e.target.checked)
+        );
     }
 
-    // -------------------------
-    // 再生関連
-    // -------------------------
-    playCurrentTrack() {
+    // ===========================
+    //   マイク起動 & 検知
+    // ===========================
+    async startSystem() {
+        if (this.isSystemStarted) return;
+
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            this.analyser = this.audioContext.createAnalyser();
+            this.analyser.fftSize = 2048;
+
+            this.microphone = this.audioContext.createMediaStreamSource(stream);
+            this.microphone.connect(this.analyser);
+
+            this.isSystemStarted = true;
+
+            this.elements.startButton.disabled = true;
+            this.elements.toggleDetection.disabled = false;
+
+            this.updateStatus("待機中");
+
+            this.startVolumeMonitoring();
+            this.updateThresholdIndicator();
+
+            this.toggleDetection();
+        } catch (err) {
+            alert("マイクの使用が拒否されました！");
+        }
+    }
+
+    startVolumeMonitoring() {
+        const update = () => {
+            if (!this.analyser) return;
+
+            const bufferLength = this.analyser.frequencyBinCount;
+            const data = new Uint8Array(bufferLength);
+            this.analyser.getByteFrequencyData(data);
+
+            const avg = data.reduce((a, b) => a + b, 0) / data.length;
+            const volume = Math.min(100, Math.max(0, (avg / 255) * 100));
+
+            this.elements.volumeBar.style.width = volume + "%";
+            this.elements.volumeValue.textContent = Math.round(volume);
+
+            if (this.isDetecting && !this.isPlaying && !this.isLoading) {
+                const now = Date.now();
+                if (volume > this.silenceThreshold) {
+                    this.lastSoundTime = now;
+                } else {
+                    if (now - this.lastSoundTime >= this.requiredSilenceDuration) {
+                        this.onSilenceDetected();
+                    }
+                }
+            }
+
+            requestAnimationFrame(update);
+        };
+
+        update();
+    }
+
+    updateThresholdIndicator() {
+        this.elements.thresholdIndicator.style.left = this.silenceThreshold + "%";
+    }
+
+    toggleDetection() {
+        this.isDetecting = !this.isDetecting;
+
+        if (this.isDetecting) {
+            this.elements.toggleDetection.textContent = "検知停止";
+            this.updateStatus("検知中");
+            this.lastSoundTime = Date.now();
+        } else {
+            this.elements.toggleDetection.textContent = "検知開始";
+            this.updateStatus("検知停止");
+        }
+    }
+
+    // ===========================
+    //  無音 → 音声再生
+    // ===========================
+    onSilenceDetected() {
         if (this.isPlaying || this.isLoading) return;
 
+        const total = this.spotTrackCounts[this.currentSpot] || 0;
+
+        if (this.currentTrack <= total) {
+            this.playCurrentTrack();
+        } else {
+            this.moveToNextSpot();
+        }
+    }
+
+    playCurrentTrack() {
         this.isLoading = true;
         this.isPlaying = true;
         this.elements.skipButton.disabled = false;
 
         if (this.useNotification) {
-            this.playNotificationSound();
+            this.notificationAudio.src = `${BASE_URL}/static/sounds/notification.wav`;
+            this.notificationAudio.play().catch(() => this.playMainAudio());
         } else {
             this.playMainAudio();
         }
-    }
-
-    playNotificationSound() {
-        const path = `${BASE_URL}/static/sounds/notification.wav`;
-        console.log("Notification:", path);
-
-        this.notificationAudio.src = path;
-        this.notificationAudio.load();
-        this.notificationAudio.play().catch(() => this.playMainAudio());
     }
 
     onNotificationEnded() {
@@ -600,63 +662,79 @@ class AudioGuideSystem {
     }
 
     playMainAudio() {
-        const audioPath = `${BASE_URL}/static/sounds/spot${this.currentSpot}/${String(this.currentTrack).padStart(2, "0")}.wav`;
-
-        console.log("Play audio:", audioPath);
+        const url = `${BASE_URL}/static/sounds/spot${this.currentSpot}/${String(
+            this.currentTrack
+        ).padStart(2, "0")}.wav`;
 
         this.updateStatus("読み込み中...");
-
-        this.audioElement.src = audioPath;
+        this.audioElement.src = url;
         this.audioElement.load();
 
-        this.audioElement.play()
+        this.audioElement
+            .play()
             .then(() => {
-                this.isLoading = false;
                 this.updateStatus("再生中");
+                this.isLoading = false;
             })
-            .catch((err) => {
-                console.error("再生エラー:", err);
-                this.updateStatus("エラー: 音声が見つかりません");
-                this.elements.skipButton.disabled = true;
-
-                setTimeout(() => {
-                    this.handlePlaybackError();
-                }, 1500);
+            .catch(() => {
+                this.updateStatus("エラー: 音声なし");
+                this.isPlaying = false;
+                this.isLoading = false;
+                this.skipToNextSpot();
             });
     }
 
     onAudioEnded() {
         this.isPlaying = false;
-        this.isLoading = false;
-        this.elements.skipButton.disabled = true;
+        this.currentTrack++;
 
-        const totalTracks = this.spotTrackCounts[this.currentSpot];
-        if (this.currentTrack < totalTracks) {
-            this.currentTrack++;
+        const total = this.spotTrackCounts[this.currentSpot];
+
+        if (this.currentTrack <= total) {
             this.updateUI();
+            this.updateStatus("検知中(次のトラック)");
         } else {
             this.moveToNextSpot();
         }
     }
 
-    // -------------------------
-    // UI 表示
-    // -------------------------
+    moveToNextSpot() {
+        this.currentSpot++;
+        if (this.currentSpot > this.totalSpots) this.currentSpot = 1;
+
+        this.currentTrack = 1;
+        this.updateUI();
+        this.updateStatus("検知中(次のスポット)");
+        this.elements.skipButton.disabled = true;
+    }
+
+    skipToNextSpot() {
+        if (this.isPlaying) {
+            this.audioElement.pause();
+            this.audioElement.currentTime = 0;
+        }
+        this.moveToNextSpot();
+    }
+
+    // ===========================
+    //        UI 更新
+    // ===========================
     updateUI() {
-        const totalTracks = this.spotTrackCounts[this.currentSpot] || "?";
+        const total = this.spotTrackCounts[this.currentSpot] || "?";
         this.elements.spotNumber.textContent = this.currentSpot;
-        this.elements.trackNumber.textContent = `${this.currentTrack} / ${totalTracks}`;
+        this.elements.trackNumber.textContent = `${this.currentTrack} / ${total}`;
     }
 
     updateStatus(msg) {
         this.elements.statusText.textContent = msg;
     }
-
 }
-// ---------------------------
-// インスタンス生成
-// ---------------------------
+
+// =========================
+//   実行
+// =========================
 const guideSystem = new AudioGuideSystem();
+
 </script>
 
 </body>
