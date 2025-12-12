@@ -442,17 +442,18 @@
                 this.gpsWatchId = null;
                 this.currentPosition = null;
                 this.lastSpotChangeByGPS = 0;
-                this.gpsRadius = 100;
-                this.isFirstGPSFix = true;
-                this.completedSpots = new Set();
+                this.gpsRadius = 100; // GPS検知範囲（デフォルト100m）
+                this.isFirstGPSFix = true; // 初回GPS取得フラグ
+                this.completedSpots = new Set(); // 再生完了したスポットを記録
                 
+                // スポットの座標設定（実際の座標に変更してください）
                 this.spotLocations = [
-                    { id: 1, lat: 35.6586, lon: 139.7454 },
-                    { id: 2, lat: 35.6762, lon: 139.6503 },
-                    { id: 3, lat: 35.7148, lon: 139.7967 },
-                    { id: 4, lat: 35.6812, lon: 139.7671 },
-                    { id: 5, lat: 35.6895, lon: 139.6917 },
-                    { id: 6, lat: 35.60808686673842, lon: 139.55517818459722 },
+                    { id: 1, lat: 35.6586, lon: 139.7454 }, // 東京駅（例）
+                    { id: 2, lat: 35.6762, lon: 139.6503 }, // 東京タワー（例）
+                    { id: 3, lat: 35.7148, lon: 139.7967 }, // スカイツリー（例）
+                    { id: 4, lat: 35.6812, lon: 139.7671 }, // 秋葉原（例）
+                    { id: 5, lat: 35.6895, lon: 139.6917 }, // 新宿（例）
+                    { id: 6, lat: 35.60808686673842, lon: 139.55517818459722 }, // 新規スポット
                 ];
                 
                 this.initUI();
@@ -461,23 +462,44 @@
                 this.loadSpotConfiguration();
             }
 
-            loadSpotConfiguration() {
-                this.spotTrackCounts = {
-                    1: 1,
-                    2: 2,
-                    3: 1,
-                    4: 2,
-                    5: 2,
-                    6: 1
-                };
+            async loadSpotConfiguration() {
+                this.elements.loadingMessage.textContent = '音声ファイルを検索中...';
+                
+                for (let spot = 1; spot <= this.totalSpots; spot++) {
+                    let trackCount = 0;
+                    let trackIndex = 1;
+                    
+                    while (trackIndex <= 20) {
+                        const testPath = `/static/sounds/spot${spot}/${String(trackIndex).padStart(2, '0')}.wav`;
+                        const exists = await this.checkFileExists(testPath);
+                        
+                        if (exists) {
+                            trackCount = trackIndex;
+                            trackIndex++;
+                        } else {
+                            break;
+                        }
+                    }
+                    
+                    this.spotTrackCounts[spot] = trackCount;
+                    console.log(`Spot ${spot}: ${trackCount} tracks found`);
+                }
                 
                 this.elements.loadingMessage.textContent = `設定完了: 全${this.totalSpots}スポット`;
                 this.updateUI();
-                this.updateCompletedCount();
                 
                 setTimeout(() => {
                     this.elements.loadingMessage.textContent = '';
                 }, 2000);
+            }
+
+            async checkFileExists(url) {
+                try {
+                    const response = await fetch(url, { method: 'HEAD' });
+                    return response.ok;
+                } catch (error) {
+                    return false;
+                }
             }
 
             initUI() {
@@ -548,7 +570,7 @@
                 this.useGPS = enabled;
                 
                 if (enabled) {
-                    this.isFirstGPSFix = true;
+                    this.isFirstGPSFix = true; // GPS ONにした時は初回扱い
                     this.startGPS();
                     this.elements.gpsStatusRow.style.display = 'flex';
                     this.elements.gpsDistance.style.display = 'block';
@@ -596,6 +618,7 @@
 
                 this.elements.gpsStatus.textContent = `精度: ${Math.round(position.coords.accuracy)}m`;
                 
+                // 最も近いスポットを検索
                 let nearestSpot = null;
                 let nearestDistance = Infinity;
                 
@@ -613,6 +636,7 @@
                     }
                 });
 
+                // 距離表示を更新
                 if (nearestSpot) {
                     if (nearestSpot.id === this.currentSpot) {
                         this.elements.gpsDistance.textContent = `📍 現在のスポット内 (${Math.round(nearestDistance)}m)`;
@@ -620,12 +644,14 @@
                         this.elements.gpsDistance.textContent = `📍 スポット${nearestSpot.id}まで: ${Math.round(nearestDistance)}m`;
                     }
                     
+                    // 初回GPS取得時は無条件で最寄りスポットに切り替え
                     if (this.isFirstGPSFix && nearestDistance <= this.gpsRadius) {
                         this.changeSpotByGPS(nearestSpot.id);
                         this.isFirstGPSFix = false;
                         return;
                     }
                     
+                    // 2回目以降：範囲内に入ったら自動切り替え（連続切り替え防止あり）
                     if (nearestDistance <= this.gpsRadius && nearestSpot.id !== this.currentSpot) {
                         const now = Date.now();
                         if (now - this.lastSpotChangeByGPS > 10000) {
@@ -656,7 +682,8 @@
             }
 
             calculateDistance(lat1, lon1, lat2, lon2) {
-                const R = 6371e3;
+                // Haversine公式で2点間の距離を計算（メートル）
+                const R = 6371e3; // 地球の半径（メートル）
                 const φ1 = lat1 * Math.PI / 180;
                 const φ2 = lat2 * Math.PI / 180;
                 const Δφ = (lat2 - lat1) * Math.PI / 180;
@@ -671,6 +698,7 @@
             }
 
             changeSpotByGPS(newSpotId) {
+                // 既に完了済みのスポットはスキップ
                 if (this.completedSpots.has(newSpotId)) {
                     console.log(`Spot ${newSpotId} already completed, skipping`);
                     this.elements.loadingMessage.textContent = `✓ スポット${newSpotId}は再生済みです`;
@@ -818,6 +846,7 @@
             onSilenceDetected() {
                 if (this.isPlaying || this.isLoading) return;
                 
+                // 完了済みスポットはスキップ
                 if (this.completedSpots.has(this.currentSpot)) {
                     console.log(`Spot ${this.currentSpot} already completed, skipping`);
                     return;
@@ -860,3 +889,165 @@
                             this.playMainAudio();
                         });
                 } else {
+                    this.playMainAudio();
+                }
+            }
+
+            onNotificationEnded() {
+                this.playMainAudio();
+            }
+
+            playMainAudio() {
+                const audioPath = `/static/sounds/spot${this.currentSpot}/${String(this.currentTrack).padStart(2, '0')}.wav`;
+                
+                this.updateStatus('読み込み中...');
+                
+                this.audioElement.src = audioPath;
+                this.audioElement.load();
+                
+                this.audioElement.play()
+                    .then(() => {
+                        this.isLoading = false;
+                        this.updateStatus('再生中');
+                        console.log(`Playing: ${audioPath}`);
+                    })
+                    .catch(error => {
+                        console.error('Audio play error:', error);
+                        console.error('Failed to load:', audioPath);
+                        this.isLoading = false;
+                        this.isPlaying = false;
+                        this.updateStatus('エラー: 音声ファイルが見つかりません');
+                        this.elements.skipButton.disabled = true;
+                        
+                        setTimeout(() => {
+                            this.handlePlaybackError();
+                        }, 2000);
+                    });
+            }
+
+            handlePlaybackError() {
+                const totalTracks = this.spotTrackCounts[this.currentSpot] || 0;
+                
+                if (this.currentTrack < totalTracks) {
+                    this.currentTrack++;
+                    this.updateUI();
+                    this.silenceDuration = 0;
+                    this.lastSoundTime = Date.now();
+                    if (this.isDetecting) {
+                        this.updateStatus('検知中 (エラー後)');
+                    }
+                } else {
+                    this.moveToNextSpot();
+                }
+            }
+
+            onAudioEnded() {
+                this.isPlaying = false;
+                this.isLoading = false;
+                this.lastSoundTime = Date.now();
+                this.silenceDuration = 0;
+                this.elements.skipButton.disabled = true;
+                
+                const totalTracks = this.spotTrackCounts[this.currentSpot] || 0;
+                
+                if (this.currentTrack < totalTracks) {
+                    this.currentTrack++;
+                    this.updateUI();
+                    
+                    if (this.isDetecting) {
+                        this.updateStatus('検知中 (次のトラック待機)');
+                    } else {
+                        this.updateStatus('待機中');
+                    }
+                } else {
+                    // 現在のスポットの全トラック再生完了
+                    this.completedSpots.add(this.currentSpot);
+                    this.updateCompletedCount();
+                    
+                    console.log(`Spot ${this.currentSpot} completed`);
+                    
+                    // GPSモードでは次のスポットに自動で移動しない
+                    if (!this.useGPS) {
+                        this.moveToNextSpot();
+                    } else {
+                        // GPSモードでは現在のスポットに留まる
+                        this.currentTrack = 1;
+                        this.updateUI();
+                        if (this.isDetecting) {
+                            this.updateStatus('検知中 (スポット完了)');
+                        } else {
+                            this.updateStatus('スポット完了');
+                        }
+                    }
+                }
+            }
+
+            moveToNextSpot() {
+                this.currentSpot++;
+                this.currentTrack = 1;
+                
+                if (this.currentSpot > this.totalSpots) {
+                    this.speakFinalMessage();
+                    this.currentSpot = 1;
+                }
+                
+                this.updateUI();
+                
+                if (this.isDetecting) {
+                    this.updateStatus('検知中 (次のスポット)');
+                } else {
+                    this.updateStatus('待機中');
+                }
+                
+                this.elements.skipButton.disabled = true;
+            }
+
+            skipToNextSpot() {
+                if (this.isPlaying) {
+                    this.audioElement.pause();
+                    this.audioElement.currentTime = 0;
+                }
+                
+                this.isPlaying = false;
+                this.isLoading = false;
+                this.moveToNextSpot();
+            }
+
+            speakFinalMessage() {
+                if ('speechSynthesis' in window) {
+                    const utterance = new SpeechSynthesisUtterance('ありがとうございました。ツアーは終了です。');
+                    utterance.lang = 'ja-JP';
+                    utterance.rate = 1.0;
+                    window.speechSynthesis.speak(utterance);
+                }
+            }
+
+            updateUI() {
+                const totalTracks = this.spotTrackCounts[this.currentSpot] || '?';
+                this.elements.spotNumber.textContent = this.currentSpot;
+                this.elements.trackNumber.textContent = `${this.currentTrack} / ${totalTracks}`;
+            }
+
+            updateCompletedCount() {
+                this.elements.completedCount.textContent = `${this.completedSpots.size} / ${this.totalSpots}`;
+            }
+
+            updateStatus(status) {
+                this.elements.statusText.textContent = status;
+                this.elements.statusText.className = 'status-value';
+                
+                if (status.includes('検知中')) {
+                    this.elements.statusText.classList.add('status-active', 'pulse');
+                } else if (status.includes('再生中')) {
+                    this.elements.statusText.classList.add('status-playing');
+                } else {
+                    this.elements.statusText.classList.remove('pulse');
+                }
+            }
+        }
+
+        // システムの初期化
+        const guideSystem = new AudioGuideSystem();
+    </script>
+</body>
+</html>
