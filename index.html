@@ -4,23 +4,32 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>旅とも</title>
+
     <style>
-        * {
+        /* ============================
+           全端末共通のリセット & スクロール禁止
+        ============================ */
+        html, body {
+            height: 100%;
             margin: 0;
             padding: 0;
-            box-sizing: border-box;
+            overflow: hidden;       /* ← スクロール禁止 */
+            touch-action: none;     /* ← スマホのスワイプ揺れ防止 */
         }
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
+            min-height: 100dvh;     /* ← スマホの表示領域に対応 */
             padding: 20px;
             display: flex;
             justify-content: center;
             align-items: center;
         }
 
+        /* ============================
+           メインカードUI
+        ============================ */
         .container {
             background: white;
             border-radius: 20px;
@@ -37,6 +46,9 @@
             font-size: 24px;
         }
 
+        /* ============================
+           状態表示
+        ============================ */
         .status-section {
             background: #f8f9fa;
             padding: 20px;
@@ -51,31 +63,8 @@
             font-size: 14px;
         }
 
-        .status-row:last-child {
-            margin-bottom: 0;
-        }
-
-        .status-label {
-            color: #6c757d;
-            font-weight: 600;
-        }
-
-        .status-value {
-            color: #212529;
-            font-weight: 700;
-        }
-
-        .status-active {
-            color: #28a745;
-        }
-
-        .status-playing {
-            color: #007bff;
-        }
-
-        .gps-status {
-            color: #17a2b8;
-        }
+        .status-label { color: #6c757d; font-weight: 600; }
+        .status-value { color: #212529; font-weight: 700; }
 
         .gps-distance {
             background: #e7f5ff;
@@ -86,12 +75,13 @@
             font-size: 16px;
             font-weight: 700;
             color: #0c5460;
+            display: none;
         }
 
-        .volume-bar-container {
-            margin-bottom: 25px;
-        }
-
+        /* ============================
+           音量バー
+        ============================ */
+        .volume-bar-container { margin-bottom: 25px; }
         .volume-bar-label {
             font-size: 14px;
             color: #6c757d;
@@ -116,25 +106,11 @@
 
         .threshold-indicator {
             position: absolute;
-            top: 0;
-            bottom: 0;
+            top: 0; bottom: 0;
             width: 3px;
             background: #dc3545;
             z-index: 10;
             transition: left 0.3s ease;
-        }
-
-        .threshold-indicator::before {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 10px;
-            height: 10px;
-            background: #dc3545;
-            border-radius: 50%;
-            border: 2px solid white;
         }
 
         .volume-value {
@@ -145,9 +121,11 @@
             font-size: 12px;
             font-weight: 700;
             color: #495057;
-            z-index: 5;
         }
 
+        /* ============================
+           スライダー
+        ============================ */
         .control-section {
             margin-bottom: 15px;
         }
@@ -162,83 +140,26 @@
             align-items: center;
         }
 
-        .threshold-value {
-            color: #667eea;
-            font-weight: 700;
-        }
-
-        .duration-value {
-            color: #764ba2;
-            font-weight: 700;
-        }
-
-        .radius-value {
-            color: #17a2b8;
-            font-weight: 700;
-        }
-
         input[type="range"] {
             width: 100%;
             height: 8px;
-            border-radius: 5px;
             background: #e9ecef;
+            border-radius: 5px;
             outline: none;
             -webkit-appearance: none;
         }
 
         input[type="range"]::-webkit-slider-thumb {
+            width: 20px; height: 20px;
+            background: #667eea;
+            border-radius: 50%;
+            cursor: pointer;
             -webkit-appearance: none;
-            appearance: none;
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            background: #667eea;
-            cursor: pointer;
         }
 
-        input[type="range"]::-moz-range-thumb {
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            background: #667eea;
-            cursor: pointer;
-            border: none;
-        }
-
-        .button-group {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            margin-top: 20px;
-        }
-
-        .notification-toggle, .gps-toggle {
-            grid-column: 1 / -1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            padding: 12px;
-            background: #f8f9fa;
-            border-radius: 10px;
-            margin-bottom: 10px;
-        }
-
-        .notification-toggle input[type="checkbox"],
-        .gps-toggle input[type="checkbox"] {
-            width: 20px;
-            height: 20px;
-            cursor: pointer;
-        }
-
-        .notification-toggle label,
-        .gps-toggle label {
-            font-size: 14px;
-            font-weight: 600;
-            color: #495057;
-            cursor: pointer;
-        }
-
+        /* ============================
+           ボタン
+        ============================ */
         button {
             padding: 15px;
             border: none;
@@ -247,100 +168,74 @@
             font-weight: 700;
             cursor: pointer;
             transition: all 0.3s ease;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
         }
 
-        .btn-primary {
-            background: #667eea;
-            color: white;
+        .button-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 20px;
         }
 
-        .btn-primary:hover {
-            background: #5568d3;
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
-        }
+        .btn-primary { background: #667eea; color: white; }
+        .btn-secondary { background: #6c757d; color: white; }
+        .btn-success { background: #28a745; color: white; grid-column: 1 / -1; }
 
-        .btn-secondary {
-            background: #6c757d;
-            color: white;
-        }
-
-        .btn-secondary:hover {
-            background: #5a6268;
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(108, 117, 125, 0.4);
-        }
-
-        .btn-success {
-            background: #28a745;
-            color: white;
+        .notification-toggle,
+        .gps-toggle {
             grid-column: 1 / -1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 10px;
         }
 
-        .btn-success:hover {
-            background: #218838;
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(40, 167, 69, 0.4);
-        }
+        /* ============================
+           スマホ最適化
+        ============================ */
+        @media screen and (max-width: 480px) {
 
-        .btn-danger {
-            background: #dc3545;
-            color: white;
-        }
+            body { padding: 12px; }
 
-        .btn-danger:hover {
-            background: #c82333;
-        }
-
-        button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none !important;
-        }
-
-        .pulse {
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% {
-                opacity: 1;
-            }
-            50% {
-                opacity: 0.6;
-            }
-        }
-
-        .loading {
-            text-align: center;
-            color: #667eea;
-            font-size: 14px;
-            margin-top: 10px;
-        }
-
-        @media (max-width: 480px) {
             .container {
-                padding: 20px;
+                padding: 18px;
+                border-radius: 16px;
             }
 
             h1 {
-                font-size: 20px;
-                margin-bottom: 20px;
+                font-size: 22px;
+                margin-bottom: 18px;
+            }
+
+            .volume-bar-wrapper {
+                height: 38px;
+            }
+
+            input[type="range"]::-webkit-slider-thumb {
+                width: 30px; height: 30px;
             }
 
             button {
-                padding: 12px;
-                font-size: 14px;
+                padding: 14px;
+                font-size: 15px;
+                border-radius: 12px;
+            }
+
+            .button-group {
+                gap: 14px;
             }
         }
     </style>
 </head>
+
 <body>
+
     <div class="container">
         <h1>🎧 旅とも</h1>
-        
+
         <div class="status-section">
             <div class="status-row">
                 <span class="status-label">スポット:</span>
@@ -354,13 +249,13 @@
                 <span class="status-label">状態:</span>
                 <span class="status-value" id="statusText">初期化中...</span>
             </div>
-            <div class="status-row" id="gpsStatusRow" style="display: none;">
+
+            <div class="status-row" id="gpsStatusRow" style="display:none;">
                 <span class="status-label">GPS:</span>
                 <span class="status-value gps-status" id="gpsStatus">取得中...</span>
             </div>
-            <div class="gps-distance" id="gpsDistance" style="display: none;">
-                📍 次のスポットまで: 計算中...
-            </div>
+
+            <div class="gps-distance" id="gpsDistance">📍 次のスポットまで: 計算中...</div>
         </div>
 
         <div class="volume-bar-container">
@@ -375,23 +270,23 @@
         <div class="control-section">
             <div class="control-label">
                 <span>無音検知しきい値</span>
-                <span class="threshold-value" id="thresholdValue">50</span>
+                <span id="thresholdValue" class="threshold-value">50</span>
             </div>
-            <input type="range" id="thresholdSlider" min="0" max="100" value="50" step="1">
+            <input type="range" id="thresholdSlider" min="0" max="100" value="50">
         </div>
 
         <div class="control-section">
             <div class="control-label">
                 <span>無音持続時間</span>
-                <span class="duration-value" id="durationValue">1.0秒</span>
+                <span id="durationValue" class="duration-value">1秒</span>
             </div>
-            <input type="range" id="durationSlider" min="0.5" max="30.0" value="1.0" step="0.5">
+            <input type="range" id="durationSlider" min="0.5" max="30" value="1" step="0.5">
         </div>
 
         <div class="control-section">
             <div class="control-label">
                 <span>GPS検知範囲</span>
-                <span class="radius-value" id="radiusValue">100m</span>
+                <span id="radiusValue" class="radius-value">100m</span>
             </div>
             <input type="range" id="radiusSlider" min="50" max="1000" value="100" step="50">
         </div>
@@ -401,19 +296,23 @@
                 <input type="checkbox" id="gpsToggle">
                 <label for="gpsToggle">📍 GPS自動切り替え</label>
             </div>
+
             <div class="notification-toggle">
                 <input type="checkbox" id="notificationToggle" checked>
                 <label for="notificationToggle">🔔 通知音を鳴らす</label>
             </div>
+
             <button class="btn-primary" id="toggleDetection" disabled>検知開始</button>
             <button class="btn-secondary" id="skipButton" disabled>次へスキップ</button>
             <button class="btn-success" id="startButton">スタート</button>
         </div>
-        
+
         <div class="loading" id="loadingMessage"></div>
     </div>
 
- <script>
+</body>
+</html>
+
 // ===============================
 // GitHub Pages 対応 BASE_URL 設定
 // ===============================
